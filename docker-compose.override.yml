@@ -1,0 +1,11 @@
+services:
+  devobs-front:
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3001 --watch"
+  
+  devobs-backend:
+    command: npx ts-node-dev --respawn --transpile-only --host 0.0.0.0 server.ts
+    environment:
+      - NODE_ENV=development
+  
+  server-test:
+    command: npx nodemon index.js

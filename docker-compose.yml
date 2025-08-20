@@ -1,0 +1,44 @@
+services:
+  devobs-front:
+    build: .
+    image: yourorg/devobs:latest
+    ports:
+      - "3001:3001"   # UI + ingest
+    environment:
+      - TARGET_URL=http://host.docker.internal:8080
+      - OTLP_PATH=/v1/otlp/http/traces
+      - OBS_RETENTION_MIN=60
+      - NODE_ENV=development
+    volumes:
+      - ./web:/app/web
+      - /app/web/node_modules
+    working_dir: /app/web
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3001"
+
+  devobs-backend:
+    build: .
+    image: yourorg/devobs:latest
+    ports:
+      - "3003:3001"   # Backend API only
+    environment:
+      - TARGET_URL=http://host.docker.internal:8080
+      - OTLP_PATH=/v1/otlp/http/traces
+      - OBS_RETENTION_MIN=60
+      - NODE_ENV=development
+    volumes:
+      - ./server:/app/server
+      - /app/server/node_modules
+    working_dir: /app/server
+    command: npx nodemon server.ts
+
+  server-test:
+    build: ./server-test
+    ports:
+      - "8080:8080"   # test server port
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./server-test:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npx nodemon index.js
