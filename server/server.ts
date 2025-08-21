@@ -18,13 +18,14 @@ const OTLP_PATH = process.env.OTLP_PATH || "/v1/otlp/http/traces";
 app.get("/health", (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
 // --- ingest: OTLP JSON traces ---
-app.post(OTLP_PATH, (req, res) => {
+app.post(OTLP_PATH, async (req, res) => {
   try {
-    console.log('handleOtlpJson')
-    console.dir(req.body, { depth: null, colors: true })
-    handleOtlpJson(req.body); 
+    console.log('handleOtlpJson');
+    console.dir(req.body, { depth: null, colors: true });
+    await handleOtlpJson(req.body); 
     res.sendStatus(204);
   } catch (e) {
+    console.error('Error handling OTLP JSON:', e);
     res.status(400).send(String(e));
   }
 });

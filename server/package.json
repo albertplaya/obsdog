@@ -6,12 +6,16 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only server.ts"
+    "dev": "ts-node-dev --respawn --transpile-only server.ts",
+    "db:init": "node dist/db-init.js",
+    "db:migrate": "node dist/db-migrate.js"
   },
   "dependencies": {
     "express": "^4.21.2",
     "morgan": "^1.10.0",
-    "ts-node-dev": "^2.0.0"
+    "ts-node-dev": "^2.0.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "typescript": "^5.0.0",

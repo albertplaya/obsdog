@@ -1,4 +1,18 @@
 services:
+  sqlite-db:
+    image: alpine:latest
+    container_name: devobs-sqlite
+    volumes:
+      - sqlite_data:/data
+      - ./server/data:/data:rw
+    working_dir: /data
+    command: sh -c "apk add --no-cache sqlite && echo 'SQLite service ready' && tail -f /dev/null"
+    healthcheck:
+      test: ["CMD", "sqlite3", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   devobs-front:
     build: .
     image: yourorg/devobs:latest
@@ -25,11 +39,16 @@ services:
       - OTLP_PATH=/v1/otlp/http/traces
       - OBS_RETENTION_MIN=60
       - NODE_ENV=development
+      - DB_PATH=/app/server/data/devobs.db
     volumes:
       - ./server:/app/server
       - /app/server/node_modules
+      - ./server/data:/app/server/data:rw
     working_dir: /app/server
     command: npx nodemon server.ts
+    depends_on:
+      sqlite-db:
+        condition: service_healthy
 
   server-test:
     build: ./server-test
@@ -42,3 +61,7 @@ services:
       - /app/node_modules
     working_dir: /app
     command: npx nodemon index.js
+
+volumes:
+  sqlite_data:
+    driver: local

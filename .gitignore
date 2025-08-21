@@ -109,3 +109,30 @@ server-test/dist/
 # Web specific
 web/dist/
 web/.vite/
+
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# SQLite temporary files
+*.db-tmp
+*.db-lock
+
+# Database backups
+*.db.backup
+*.sqlite.backup
+
+# SQLite WAL mode files
+*-wal
+*-shm
+*-journal
+
+# Database directories
+server/data/
+server/database/
+web/dist/
+web/.vite/

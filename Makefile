@@ -110,9 +110,9 @@ ps: ## Alias for status
 	$(MAKE) status
 
 # Utility commands
-.PHONY: shell-devobs
-shell-devobs: ## Open shell in devobs container
-	docker-compose -f $(COMPOSE_FILE) exec devobs sh
+.PHONY: shell-devobs-backend
+shell-devobs-backend: ## Open shell in devobs container
+	docker-compose -f $(COMPOSE_FILE) exec devobs-backend sh	
 
 .PHONY: shell-server-test
 shell-server-test: ## Open shell in server-test container
