@@ -114,6 +114,10 @@ ps: ## Alias for status
 shell-devobs-backend: ## Open shell in devobs container
 	docker-compose -f $(COMPOSE_FILE) exec devobs-backend sh	
 
+.PHONY: shell-devobs-front	
+shell-devobs-front: ## Open shell in devobs container
+	docker-compose -f $(COMPOSE_FILE) exec devobs-front sh	
+
 .PHONY: shell-server-test
 shell-server-test: ## Open shell in server-test container
 	docker-compose -f $(COMPOSE_FILE) exec server-test sh

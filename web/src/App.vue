@@ -3,6 +3,7 @@
     <header>
       <h1>Dev Observability</h1>
       <button @click="reload">Reload</button>
+      <Button>Click me</Button>
     </header>
     <main>
       <RequestList :items="requests" @select="select" />
@@ -14,8 +15,9 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { getSnapshot, connectEvents } from './api'
-import RequestList from './components/RequestList.vue'
-import RequestDetail from './components/RequestDetail.vue'
+import RequestList from '@/components/RequestList.vue'
+import RequestDetail from '@/components/RequestDetail.vue'
+import { Button } from "@/components/ui/button"
 
 type Req = { id?: string; ts: number; method: string; path: string; status: number; dur_ms: number; traceId?: string }
 type SqlEvt = { ts: number; traceId?: string; sql: string; dur_ms: number; rows?: number }
