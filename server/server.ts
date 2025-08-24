@@ -6,6 +6,20 @@ import { Requests, Sql, snapshot, gcLoop } from "./storage.ts";
 import { handleOtlpJson } from "./otlp-json.ts";
 
 const app = express();
+
+// Add CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
@@ -53,7 +67,7 @@ app.post("/ingest/sql", (req, res) => {
 });
 
 // --- API: snapshots ---
-app.get("/api/snapshot", (_req, res) => res.json(snapshot()));
+app.get("/api/snapshot", async (_req, res) => res.json(await snapshot()));
 
 // --- SSE: live stream (UI uses EventSource) ---
 app.get("/events", (req, res) => {
@@ -94,4 +108,4 @@ app.listen(PORT, () => {
 });
 
 // GC loop
-gcLoop();
+//gcLoop();
