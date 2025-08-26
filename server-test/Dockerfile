@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -15,4 +15,4 @@ COPY . .
 EXPOSE 8080
 
 # Start the test server
-CMD ["node", "index.js"]
+#CMD ["node", "index.js"]

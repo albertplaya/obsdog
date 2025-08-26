@@ -132,13 +132,13 @@
         <table class="logs-table">
           <thead>
             <tr>
-              <th class="table-header">Time</th>
-              <th class="table-header">Level</th>
-              <th class="table-header">Service</th>
-              <th class="table-header">Message</th>
-              <th class="table-header">Trace ID</th>
-              <th class="table-header">Duration</th>
-              <th class="table-header">Span ID</th>
+              <th class="table-header">DATE</th>
+              <th class="table-header">RESOURCE</th>
+              <th class="table-header">SERVICE</th>
+              <th class="table-header">DURATION</th>
+              <th class="table-header">METHOD</th>
+              <th class="table-header">STATUS CODE</th>
+              <th class="table-header">ERROR TYPE</th>
             </tr>
           </thead>
           <tbody>
@@ -147,35 +147,40 @@
               :key="log.id" 
               class="log-row"
               :class="`level-${log.level}`"
+              @click="openLogDetail(log)"
             >
               <td class="log-time">{{ formatTime(log.timestamp) }}</td>
-              <td class="log-level">
-                <span class="level-badge" :class="`level-${log.level}`">
-                  {{ log.level.toUpperCase() }}
+              <td class="log-resource">
+                <span v-if="log.metadata?.path" class="resource-path">
+                  {{ log.metadata.method || 'GET' }} {{ log.metadata.path }}
                 </span>
+                <span v-else class="resource-path">{{ log.message }}</span>
               </td>
               <td class="log-service">{{ log.service }}</td>
-              <td class="log-message">
-                <div class="message-content">
-                  <span class="message-text">{{ log.message }}</span>
-                  <div v-if="log.metadata" class="message-metadata">
-                    <span v-for="(value, key) in log.metadata" :key="key" class="metadata-item">
-                      {{ key }}: {{ value }}
-                    </span>
-                  </div>
-                </div>
-              </td>
-              <td class="log-trace">
-                <span v-if="log.traceId" class="trace-id">{{ log.traceId }}</span>
-                <span v-else class="no-trace">-</span>
-              </td>
               <td class="log-duration">
                 <span v-if="log.duration" class="duration-value">{{ log.duration }}ms</span>
                 <span v-else class="no-duration">-</span>
               </td>
-              <td class="log-span">
-                <span v-if="log.metadata?.spanId" class="span-id">{{ log.metadata.spanId }}</span>
-                <span v-else class="no-span">-</span>
+              <td class="log-method">
+                <span v-if="log.metadata?.method" class="method-badge">
+                  {{ log.metadata.method }}
+                </span>
+                <span v-else class="no-method">-</span>
+              </td>
+              <td class="log-status">
+                <span v-if="log.metadata?.status" 
+                      class="status-badge" 
+                      :class="getStatusClass(log.metadata.status)">
+                  {{ log.metadata.status }}
+                </span>
+                <span v-else class="no-status">-</span>
+              </td>
+              <td class="log-error-type">
+                <span v-if="log.level === 'error' && log.metadata?.status >= 400" 
+                      class="error-type-badge">
+                  {{ getErrorType(log.metadata.status) }}
+                </span>
+                <span v-else class="no-error">-</span>
               </td>
             </tr>
           </tbody>
@@ -208,6 +213,221 @@
         </div>
       </div>
     </main>
+
+    <!-- Log Detail Side Panel -->
+    <div 
+      v-if="selectedLog" 
+      class="log-detail-panel"
+      :class="{ 'panel-open': showDetailPanel }"
+    >
+      <div class="panel-header">
+        <h3 class="panel-title">Log Details</h3>
+        <button 
+          @click="closeLogDetail" 
+          class="close-button"
+          aria-label="Close panel"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <div class="panel-content">
+        <div class="detail-section">
+          <h4 class="section-title">Basic Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">Timestamp:</span>
+              <span class="detail-value">{{ formatTime(selectedLog.timestamp) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Level:</span>
+              <span class="detail-value">
+                <span class="level-badge" :class="`level-${selectedLog.level}`">
+                  {{ selectedLog.level.toUpperCase() }}
+                </span>
+              </span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Service:</span>
+              <span class="detail-value">{{ selectedLog.service }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Duration:</span>
+              <span class="detail-value">{{ selectedLog.duration }}ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4 class="section-title">HTTP Request</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">Method:</span>
+              <span class="detail-value">
+                <span class="method-badge">{{ selectedLog.metadata?.method || 'N/A' }}</span>
+              </span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Path:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.path || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Status Code:</span>
+              <span class="detail-value">
+                <span class="status-badge" :class="getStatusClass(selectedLog.metadata?.status)">
+                  {{ selectedLog.metadata?.status || 'N/A' }}
+                </span>
+              </span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Status Text:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.statusText || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">URL:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.url || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Host:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.host || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Scheme:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.scheme || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Flavor:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.flavor || 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4 class="section-title">Network Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">Transport:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.transport || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Host Name:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.hostName || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Host IP:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.hostIp || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Host Port:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.hostPort || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Peer IP:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.peerIp || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Peer Port:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.peerPort || 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4 class="section-title">User Agent</h4>
+          <div class="detail-item full-width">
+            <span class="detail-label">User Agent:</span>
+            <span class="detail-value user-agent">{{ selectedLog.metadata?.userAgent || 'N/A' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4 class="section-title">Trace Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">Trace ID:</span>
+              <span class="detail-value trace-id">{{ selectedLog.traceId || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Span ID:</span>
+              <span class="detail-value span-id">{{ selectedLog.metadata?.spanId || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Parent Span ID:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.parentSpanId || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Span Kind:</span>
+              <span class="detail-value">{{ selectedLog.metadata?.kind || 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4 class="section-title">Message & Metadata</h4>
+          <div class="detail-item full-width">
+            <span class="detail-label">Message:</span>
+            <span class="detail-value message-text">{{ selectedLog.message }}</span>
+          </div>
+          <div v-if="selectedLog.metadata" class="metadata-section">
+            <h5 class="metadata-title">Additional Metadata:</h5>
+            <div class="metadata-grid">
+              <div 
+                v-for="(value, key) in selectedLog.metadata" 
+                :key="key"
+                class="metadata-item"
+              >
+                <span class="metadata-key">{{ key }}:</span>
+                <span class="metadata-value">{{ formatMetadataValue(value) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedLog.metadata?.sql" class="detail-section">
+          <h4 class="section-title">SQL Query</h4>
+          <div class="sql-section">
+            <pre class="sql-query">{{ selectedLog.metadata.sql }}</pre>
+            <div class="sql-meta">
+              <span class="sql-duration">Duration: {{ selectedLog.duration }}ms</span>
+              <span v-if="selectedLog.metadata.rows" class="sql-rows">Rows: {{ selectedLog.metadata.rows }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw JSON Data Section -->
+        <div class="detail-section">
+          <h4 class="section-title">Raw Data</h4>
+          <div class="raw-json-section">
+            <div class="json-header">
+              <span class="json-label">Complete log data in JSON format:</span>
+              <button 
+                @click="copyRawJson" 
+                class="copy-button"
+                :title="copyButtonText"
+              >
+                <svg v-if="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                {{ copyButtonText }}
+              </button>
+            </div>
+            <pre class="raw-json">{{ formatRawJson(selectedLog) }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backdrop -->
+    <div 
+      v-if="showDetailPanel" 
+      class="backdrop"
+      @click="closeLogDetail"
+    ></div>
   </div>
 </template>
 
@@ -260,6 +480,14 @@ const selectedTimeRange = ref('1h')
 const selectedServices = ref<string[]>([])
 const currentPage = ref(1)
 const pageSize = ref(50)
+
+// Log detail panel state
+const selectedLog = ref<LogEntry | null>(null)
+const showDetailPanel = ref(false)
+
+// Copy functionality state
+const copied = ref(false)
+const copyButtonText = computed(() => copied.value ? 'Copied!' : 'Copy JSON')
 
 // Server data
 const logs = ref<LogEntry[]>([])
@@ -324,6 +552,64 @@ function getLevelCount(level: string) {
 
 function formatTime(timestamp: number) {
   return new Date(timestamp).toLocaleString()
+}
+
+function getStatusClass(status: number): string {
+  if (status >= 200 && status < 300) return 'status-success'
+  if (status >= 400 && status < 500) return 'status-client-error'
+  if (status >= 500) return 'status-server-error'
+  return 'status-info'
+}
+
+function getErrorType(status: number): string {
+  if (status >= 400 && status < 500) return 'Client Error'
+  if (status >= 500) return 'Server Error'
+  return 'Unknown'
+}
+
+function openLogDetail(log: LogEntry) {
+  selectedLog.value = log
+  showDetailPanel.value = true
+}
+
+function closeLogDetail() {
+  showDetailPanel.value = false
+  selectedLog.value = null
+}
+
+function formatMetadataValue(value: any): string {
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2)
+  }
+  return String(value)
+}
+
+function formatRawJson(log: LogEntry): string {
+  return JSON.stringify(log, null, 2)
+}
+
+async function copyRawJson() {
+  try {
+    const jsonString = formatRawJson(selectedLog.value!)
+    await navigator.clipboard.writeText(jsonString)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy to clipboard:', err)
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea')
+    textArea.value = formatRawJson(selectedLog.value!)
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  }
 }
 
 function clearFilters() {
@@ -399,6 +685,15 @@ function generateLogsFromData(snapshot: ServerSnapshot) {
     const httpStatusText = attributes['http.status_text']
     const httpUrl = attributes['http.url']
     const httpHost = attributes['http.host']
+    const httpScheme = attributes['http.scheme']
+    const httpFlavor = attributes['http.flavor']
+    const netTransport = attributes['net.transport']
+    const netHostName = attributes['net.host.name']
+    const netHostIp = attributes['net.host.ip']
+    const netHostPort = attributes['net.host.port']
+    const netPeerIp = attributes['net.peer.ip']
+    const netPeerPort = attributes['net.peer.port']
+    const httpUserAgent = attributes['http.user_agent']
     
     // Determine log level based on HTTP status code
     let level: 'debug' | 'info' | 'warn' | 'error' = 'info'
@@ -427,6 +722,15 @@ function generateLogsFromData(snapshot: ServerSnapshot) {
         statusText: httpStatusText,
         url: httpUrl,
         host: httpHost,
+        scheme: httpScheme,
+        flavor: httpFlavor,
+        transport: netTransport,
+        hostName: netHostName,
+        hostIp: netHostIp,
+        hostPort: netHostPort,
+        peerIp: netPeerIp,
+        peerPort: netPeerPort,
+        userAgent: httpUserAgent,
         duration: durationMs,
         spanId: span.span_id,
         kind: span.kind,
@@ -501,6 +805,18 @@ onMounted(async () => {
       const httpTarget = attributes['http.target'] || '/'
       const httpStatusCode = attributes['http.status_code']
       const httpStatusText = attributes['http.status_text']
+      const httpUrl = attributes['http.url']
+      const httpHost = attributes['http.host']
+      const httpScheme = attributes['http.scheme']
+      const httpFlavor = attributes['http.flavor']
+      const netTransport = attributes['net.transport']
+      const netHostName = attributes['net.host.name']
+      const netHostIp = attributes['net.host.ip']
+      const netHostPort = attributes['net.host.port']
+      const netPeerIp = attributes['net.peer.ip']
+      const netPeerPort = attributes['net.peer.port']
+      const httpUserAgent = attributes['http.user_agent']
+      
       const durationMs = Math.round(span.duration_ns / 1000000)
       const timestamp = Math.round(span.start_time_ns / 1000000)
       
@@ -522,6 +838,17 @@ onMounted(async () => {
           path: httpTarget,
           status: httpStatusCode,
           statusText: httpStatusText,
+          url: httpUrl,
+          host: httpHost,
+          scheme: httpScheme,
+          flavor: httpFlavor,
+          transport: netTransport,
+          hostName: netHostName,
+          hostIp: netHostIp,
+          hostPort: netHostPort,
+          peerIp: netPeerIp,
+          peerPort: netPeerPort,
+          userAgent: httpUserAgent,
           duration: durationMs,
           spanId: span.span_id,
           kind: span.kind,
@@ -997,4 +1324,378 @@ onMounted(async () => {
     gap: 16px;
   }
 }
+
+.log-resource {
+  padding: 12px 16px;
+  max-width: 300px;
+}
+
+.resource-path {
+  font-size: 14px;
+  color: #1e293b;
+  font-family: 'Monaco', 'Menlo', monospace;
+  word-break: break-all;
+}
+
+.log-method {
+  padding: 12px 16px;
+}
+
+.method-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.no-method {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.log-status {
+  padding: 12px 16px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-success {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.status-client-error {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.status-server-error {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.status-info {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.no-status {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.log-error-type {
+  padding: 12px 16px;
+}
+
+.error-type-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.no-error {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Log Detail Panel Styles */
+.log-detail-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 500px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  overflow-y: auto;
+}
+
+.log-detail-panel.panel-open {
+  transform: translateX(0);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background-color: transparent;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.panel-content {
+  padding: 24px;
+}
+
+.detail-section {
+  margin-bottom: 32px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: #1e293b;
+  word-break: break-all;
+}
+
+.message-text {
+  font-family: 'Monaco', 'Menlo', monospace;
+  background-color: #f8fafc;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  white-space: pre-wrap;
+}
+
+.metadata-section {
+  margin-top: 16px;
+}
+
+.metadata-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.metadata-item {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.metadata-key {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  min-width: 80px;
+}
+
+.metadata-value {
+  font-size: 12px;
+  color: #1e293b;
+  font-family: 'Monaco', 'Menlo', monospace;
+  word-break: break-all;
+}
+
+.sql-section {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sql-query {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 16px;
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.sql-meta {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #f1f5f9;
+  border-top: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Raw JSON Section */
+.raw-json-section {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.json-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.json-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.copy-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.copy-button:active {
+  background-color: #f3f4f6;
+}
+
+.raw-json {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 16px;
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+}
+
+/* Make table rows clickable */
+.log-row {
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.15s ease;
+}
+
+.log-row:hover {
+  background-color: #f8fafc;
+}
+
+.user-agent {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  background-color: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
 </style>

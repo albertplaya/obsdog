@@ -60,7 +60,7 @@ services:
       - ./server-test:/app
       - /app/node_modules
     working_dir: /app
-    command: npx nodemon index.js
+    command: npx node -r @opentelemetry/auto-instrumentations-node/register index.js
 
 volumes:
   sqlite_data:
