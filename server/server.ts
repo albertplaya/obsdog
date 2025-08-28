@@ -99,9 +99,6 @@ app.get("/events", (req, res) => {
   });
 });
 
-// --- static web UI ---
-app.use(express.static(path.join(__dirname, "public")));
-
 // --- start servers ---
 app.listen(PORT, () => {
   console.log(`[devobs] UI+ingest on :${PORT}  (OTLP: ${OTLP_PATH})`);

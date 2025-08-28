@@ -59,8 +59,8 @@ services:
     volumes:
       - ./server-test:/app
       - /app/node_modules
-    working_dir: /app
-    command: npx node -r @opentelemetry/auto-instrumentations-node/register index.js
+    working_dir: /app 
+    command: node --import ./instrumentation.mjs --experimental-loader=@opentelemetry/instrumentation/hook.mjs --watch index.js
 
 volumes:
   sqlite_data:

@@ -1,5 +1,4 @@
 // index.js
-import './tracing.js'   // start OTel before anything else
 import express from 'express'
 import HelloOO from './HelloOO.js'
 
